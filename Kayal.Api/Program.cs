@@ -1,22 +1,49 @@
+#pragma warning disable OPENAI001
+
+using Azure.Identity;
+using Kayal.Api.Services;
+using OpenAI.Responses;
+using System.ClientModel.Primitives;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Register controller support with the dependency-injection container.
 builder.Services.AddControllers();
 
-// Register OpenAPI document generation.
+builder.Services.AddSingleton<ResponsesClient>(serviceProvider =>
+{
+    IConfiguration configuration =
+        serviceProvider.GetRequiredService<IConfiguration>();
+
+    string endpoint =
+        configuration["AzureOpenAI:Endpoint"]
+        ?? throw new InvalidOperationException(
+            "AzureOpenAI:Endpoint is missing.");
+
+    BearerTokenPolicy tokenPolicy = new(
+        new DefaultAzureCredential(),
+        "https://ai.azure.com/.default");
+
+    return new ResponsesClient(
+        authenticationPolicy: tokenPolicy,
+        options: new ResponsesClientOptions
+        {
+            Endpoint = new Uri(endpoint)
+        });
+});
+
+builder.Services.AddScoped<IKayalService, KayalService>();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Expose the OpenAPI document only during development.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// Not needed while localhost is HTTP-only.
+// app.UseHttpsRedirection();
 
-// Connect attribute-routed controller actions to the HTTP pipeline.
 app.MapControllers();
 
 app.Run();
