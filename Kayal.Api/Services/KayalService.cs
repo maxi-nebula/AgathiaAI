@@ -3,6 +3,7 @@
 using Kayal.Api.Models;
 using OpenAI.Responses;
 using Kayal.Api.Prompts;
+using System.Text.Json;
 
 namespace Kayal.Api.Services;
 
@@ -45,5 +46,47 @@ public async Task<ChatResponse> ChatAsync(ChatRequest request)
     {
         Message = response.GetOutputText()
     };
+}
+
+public async Task<JobEmailAnalysis> AnalyzeJobEmailAsync(
+    EmailAnalysisRequest request)
+{
+    string emailContent = $"""
+        From: {request.From}
+        Subject: {request.Subject}
+
+        Body:
+        {request.Body}
+        """;
+
+    CreateResponseOptions options = new()
+    {
+        Model = _deployment,
+        Instructions = JobEmailAnalysisPrompt.Instructions,
+
+        InputItems =
+        {
+            ResponseItem.CreateUserMessageItem(emailContent)
+        }
+    };
+
+    ResponseResult response =
+        await _responsesClient.CreateResponseAsync(options);
+
+    string json = response.GetOutputText();
+    Console.WriteLine("KAYAL RESPONSE:");
+Console.WriteLine(json);
+
+    JobEmailAnalysis? analysis =
+        JsonSerializer.Deserialize<JobEmailAnalysis>(
+            json,
+            new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+    return analysis
+        ?? throw new InvalidOperationException(
+            "Kayal returned an invalid email analysis.");
 }
 }
