@@ -1,11 +1,14 @@
 namespace Kayal.Api.Models;
-
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 public class Job
 {
-    public string? Id { get; set; }
-
+   [BsonRepresentation(BsonType.ObjectId)]
     public string? CompanyId { get; set; }
 
+    [BsonId]
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string? Id { get; set; }
     public string? JobTitle { get; set; }
 
     public string? Location { get; set; }
